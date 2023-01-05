@@ -8,7 +8,7 @@ SUMMARY='Simple .ini file parser'
 DESCRIPTION='inih (INI Not Invented Here) is a simple .INI file parser written in C'
 HOMEPAGE='https://github.com/benhoyt/inih'
 SRC_URI="https://github.com/benhoyt/inih/archive/refs/tags/r${PV}.tar.gz"
-SRC_DIR="${PN}-v${PV}"
+SRC_DIR="inih-r${PV}"
 
 BUILD_REQUIRES=meson
 
