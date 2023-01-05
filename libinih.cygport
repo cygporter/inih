@@ -1,0 +1,15 @@
+inherit meson
+
+NAME=libinih
+VERSION=56
+RELEASE=1
+CATEGORY=Libs
+SUMMARY='Simple .ini file parser'
+DESCRIPTION='inih (INI Not Invented Here) is a simple .INI file parser written in C'
+HOMEPAGE='https://github.com/benhoyt/inih'
+SRC_URI="https://github.com/benhoyt/inih/archive/refs/tags/r${PV}.tar.gz"
+SRC_DIR="${PN}-v${PV}"
+
+BUILD_REQUIRES=meson
+
+# vim: set ft=bash noexpandtab tabstop=8 listchars=tab\:\ \ ,trail\:-,lead\:-
