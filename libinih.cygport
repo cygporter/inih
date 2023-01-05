@@ -12,4 +12,13 @@ SRC_DIR="inih-r${PV}"
 
 BUILD_REQUIRES=meson
 
+# Based on the upstream .github/workflows/tests.yml
+src_test () {
+	cd ${S}/tests
+	./unittest.sh
+
+	cd ${S}/examples
+	./cpptest.sh
+}
+
 # vim: set ft=bash noexpandtab tabstop=8 listchars=tab\:\ \ ,trail\:-,lead\:-
