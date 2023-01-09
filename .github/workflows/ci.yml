@@ -166,3 +166,15 @@ jobs:
           path: build-results.tar
           if-no-files-found: error
         timeout-minutes: 5
+
+      # Artifacts are great for letting me download the files, and passing
+      # files between jobs in the same action, but not for passing files
+      # between actions.  Cache the build results so they can be used by a
+      # separate release action.
+      - name: Cache build results
+        if: startsWith(github.ref, 'refs/heads/')
+        uses: actions/cache/save@v3
+        with:
+          key: libinih-build-${{ github.ref_name }}-${{ github.sha }}
+          path: build-results.tar
+        timeout-minutes: 5
