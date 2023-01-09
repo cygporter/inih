@@ -155,7 +155,7 @@ jobs:
         shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
         env:
           PATH: C:\cygwin\bin
-        run: tar -caf libinih-build-results.txz libinih-*-*.*/
+        run: tar -cvf build-results.tar libinih-*-*.*/
         timeout-minutes: 10
 
       - name: Store build results
@@ -163,6 +163,6 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: build-results
-          path: libinih-build-results.txz
+          path: build-results.tar
           if-no-files-found: error
         timeout-minutes: 5
