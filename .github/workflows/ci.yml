@@ -10,22 +10,19 @@ jobs:
       PATH: C:\cygwin\bin
     steps:
 
-      - name: Install Cygwin Git and cygport
-        uses: cygwin/cygwin-install-action@v2
-        with:
-          packages: git cygport
-        timeout-minutes: 10
-
-      - name: Manually configure safe.directory
-        run: git config --global --add safe.directory '*'
+      - name: Configure Git for Windows' core.autocrlf
+        run: git config --global core.autocrlf input
         timeout-minutes: 1
 
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          set-safe-directory: false  # actions/checkout otherwise tries to use the wrong config file, per actions/checkout#767
-          fetch-depth: 0  # Need this to push to Cygwin Git mirror
         timeout-minutes: 1
+
+      - name: Install cygport
+        uses: cygwin/cygwin-install-action@v2
+        with:
+          packages: cygport
+        timeout-minutes: 10
 
       - name: Load variables from the cygport file
         run: |
