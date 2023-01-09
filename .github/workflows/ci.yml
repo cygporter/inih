@@ -3,43 +3,103 @@ on: [push, pull_request]
 jobs:
   build-test:
     runs-on: windows-latest
-    permissions:
-      contents: write
-    defaults:
-      run:
-        shell: bash --noprofile --norc -e -o pipefail -o igncr {0}
-    env:
-      PATH: C:\cygwin\bin
     steps:
-      - name: Install Cygwin Git and cygport
-        uses: cygwin/cygwin-install-action@v2
-        with:
-          packages: git cygport
-        timeout-minutes: 10
-      - name: Manually configure safe.directory
-        run: git config --global --add safe.directory '*'
+
+      - name: Configure Git for Windows' core.autocrlf
+        run: git config --global core.autocrlf input
         timeout-minutes: 1
+
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          set-safe-directory: false  # actions/checkout otherwise tries to use the wrong config file, per actions/checkout#767
-          fetch-depth: 0  # Need this to push to Cygwin Git mirror
         timeout-minutes: 1
+
+      # In the name of speed, pull packages from a previous cache on GitHub's
+      # servers if one exists, rather than hitting the Cygwin mirrors.
+      #
+      # Ideally we'd cache the actual Cygwin installation, to avoid the need to
+      # unpack and install the packages, as well as the need to download them,
+      # but the cache action uses Git tar, which copes poorly with the symlinks
+      # in the Cygwin installation directory, and there's a bootstrap problem
+      # with using Cygwin's tar for that purpose!
+      #
+      # We always want to update the cache, as there might have been package
+      # updates since the previous store was cached, so use the trick from [0]
+      # to ensure that happens.
+      # [0]: https://github.com/actions/cache/blob/6fd2d4538ca777f67fccddb233cf1a8ff1339012/tips-and-workarounds.md#update-a-cache
+      - name: Use Cygwin package cache
+        uses: actions/cache/restore@v3
+        with:
+          key: cygwin-packages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: 'C:\cygwin-packages'
+          restore-keys: |
+            cygwin-packages-${{ github.run_id }}-
+            cygwin-packages-
+
+      # Compute a checksum for the current package cache, so we can check if we
+      # need to store a new cache.
+      - name: Compute package cache checksum
+        working-directory: 'C:\'
+        shell: bash
+        run: |
+          if [[ -d cygwin-packages ]]; then
+            find cygwin-packages -type f '!' -name setup.ini -print0 |
+              sort -z |
+              xargs -0 b2sum >cygwin-package-checksum.old
+          fi
+        timeout-minutes: 1
+
+      - name: Install cygport
+        uses: cygwin/cygwin-install-action@db475590d56881c6cef7b3f96f6f3dd9532ea1f4
+        with:
+          packages: cygport
+          add-to-path: false
+        timeout-minutes: 10
+
       - name: Load variables from the cygport file
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: |
           eval "$(cygport libinih.cygport vars BUILD_REQUIRES PVR)"
           printf 'BUILD_REQUIRES=%s\n' "$BUILD_REQUIRES" >>"$GITHUB_ENV"
           printf 'PVR=%s\n' "$PVR" >>"$GITHUB_ENV"
         timeout-minutes: 1
+
       - name: Install Cygwin build requirements
-        uses: cygwin/cygwin-install-action@v2
+        uses: cygwin/cygwin-install-action@db475590d56881c6cef7b3f96f6f3dd9532ea1f4
         with:
           packages: ${{ env.BUILD_REQUIRES }}
+          add-to-path: false
         timeout-minutes: 30
+
+      - name: Check if package cache needs updating
+        if: always()
+        working-directory: 'C:\'
+        shell: bash
+        run: |
+          if [[ -d cygwin-packages ]]; then
+            find cygwin-packages -type f '!' -name setup.ini -print0 |
+              sort -z |
+              xargs -0 b2sum >cygwin-package-checksum.new
+            if ! diff cygwin-package-checksum.old cygwin-package-checksum.new; then
+              printf 'UPDATE_CYGWIN_PACKAGE_CACHE=YesPlease' >>"$GITHUB_ENV"
+            fi
+          fi
+        timeout-minutes: 1
+
+      - name: Store package cache
+        if: always() && env.UPDATE_CYGWIN_PACKAGE_CACHE == 'YesPlease'
+        uses: actions/cache/save@v3
+        with:
+          key: cygwin-packages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: 'C:\cygwin-packages'
+        timeout-minutes: 1
+
       - name: Generate cygcheck output
         if: always()
-        run: cygcheck -srv >/var/log/cygcheck.out
+        run: C:\cygwin\bin\cygcheck.exe -srv >C:\cygwin\var\log\cygcheck.out
         timeout-minutes: 5
+
       - name: Store Cygwin logs
         if: always()
         uses: actions/upload-artifact@v3
@@ -47,65 +107,57 @@ jobs:
           name: cygwin-logs
           path: 'C:\cygwin\var\log\'
         timeout-minutes: 5
+
       - name: Cygport download
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: cygport libinih.cygport download
         timeout-minutes: 5
+
       - name: Cygport prep
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: cygport libinih.cygport prep
         timeout-minutes: 1
+
       - name: Cygport compile
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: cygport libinih.cygport compile
         timeout-minutes: 30
+
       - name: Cygport test
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: cygport libinih.cygport test
         timeout-minutes: 300
+
       - name: Cygport install
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: cygport libinih.cygport install
         timeout-minutes: 30
+
       - name: Cygport package
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: cygport libinih.cygport package
         timeout-minutes: 5
-      - name: Configure SSH
-        if: github.ref == 'refs/heads/main'
-        env:
-          MAINTAINER_KEY: ${{ secrets.MAINTAINER_KEY }}
-        run: |
-          umask 0077
-          mkdir -p ~/.ssh
-          echo "$MAINTAINER_KEY" >~/.ssh/id_rsa
-          echo 'cygwin.com,8.43.85.97 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBGqrxexIuyqmCVe33p1HuhUFzsXte5QZKb+BJlsRrvXOpUOJEW2S0kszyAiymeV7AXaYmHDKVRJpGVR+0ua0Xww=' >~/.ssh/known_hosts
-        timeout-minutes: 1
-      - name: Create release tag
-        if: github.ref == 'refs/heads/main'
-        env:
-          GIT_COMMITTER_NAME: ${{ github.actor }}
-          GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
-        run: |
-          git tag -am "v${PVR}" "v${PVR}"
-          git push origin tag "v${PVR}"
-        timeout-minutes: 1
-      - name: Create a GitHub release
-        if: github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ env.PVR }}
-          files: |
-            libinih-*/dist/libinih/*
-            libinih-*/dist/libinih/*/*
-          target_commitish: ${{ github.ref }}
-        timeout-minutes: 2
-      - name: Mirror to Cygwin Git repositories
-        if: github.ref == 'refs/heads/main'
-        run: git push cygwin@cygwin.com:/git/cygwin-packages/libinih tag "v${PVR}"
-        timeout-minutes: 5
-      - name: Cygport upload
-        if: github.ref == 'refs/heads/main'
-        run: SSH_KEY=~/.ssh/id_rsa cygport libinih.cygport upload
-        timeout-minutes: 5
+
       - name: Tar up build results
         if: always()
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: tar -caf libinih-build-results.txz libinih-*-*.*/
         timeout-minutes: 10
+
       - name: Store build results
         if: always()
         uses: actions/upload-artifact@v3
