@@ -1,0 +1,143 @@
+name: Prepare release
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Name for the release tag
+        required: false
+        default: ''
+        type: string
+permissions:
+  contents: write
+jobs:
+  prep-release:
+    runs-on: windows-latest
+    steps:
+
+      - name: Configure Git for Windows' core.autocrlf
+        run: git config --global core.autocrlf input
+        timeout-minutes: 1
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        timeout-minutes: 1
+
+      - name: Get build cache
+        id: build-cache
+        uses: actions/cache/restore@v3
+        with:
+          key: libinih-build-${{ github.ref_name }}-${{ github.sha }}
+          path: build-results.tar
+        timeout-minutes: 2
+
+      - name: Abort on cache miss
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
+          Write-Output "::error::Cache miss"
+          exit 1
+        timeout-minutes: 1
+
+      - name: Use Cygwin package cache
+        uses: actions/cache/restore@v3
+        with:
+          key: cygwin-packages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: 'C:\cygwin-packages'
+          restore-keys: |
+            cygwin-packages-${{ github.run_id }}-
+            cygwin-packages-
+
+      # Compute a checksum for the current package cache, so we can check if we
+      # need to store a new cache.
+      - name: Compute package cache checksum
+        working-directory: 'C:\'
+        shell: bash
+        run: |
+          if [[ -d cygwin-packages ]]; then
+            find cygwin-packages -type f '!' -name setup.ini -print0 |
+              sort -z |
+              xargs -0 b2sum >cygwin-package-checksum.old
+          fi
+        timeout-minutes: 1
+
+      - name: Install cygport
+        uses: cygwin/cygwin-install-action@db475590d56881c6cef7b3f96f6f3dd9532ea1f4
+        with:
+          packages: cygport
+          add-to-path: false
+        timeout-minutes: 10
+
+      - name: Check if package cache needs updating
+        working-directory: 'C:\'
+        shell: bash
+        run: |
+          if [[ -d cygwin-packages ]]; then
+            find cygwin-packages -type f '!' -name setup.ini -print0 |
+              sort -z |
+              xargs -0 b2sum >cygwin-package-checksum.new
+            if ! diff cygwin-package-checksum.old cygwin-package-checksum.new; then
+              printf 'UPDATE_CYGWIN_PACKAGE_CACHE=YesPlease' >>"$GITHUB_ENV"
+            fi
+          fi
+        timeout-minutes: 1
+
+      - name: Store package cache
+        if: env.UPDATE_CYGWIN_PACKAGE_CACHE == 'YesPlease'
+        uses: actions/cache/save@v3
+        with:
+          key: cygwin-packages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: 'C:\cygwin-packages'
+        timeout-minutes: 1
+
+      - name: Generate cygcheck output
+        if: always()
+        run: C:\cygwin\bin\cygcheck.exe -srv >C:\cygwin\var\log\cygcheck.out
+        timeout-minutes: 5
+
+      - name: Store Cygwin logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: cygwin-logs
+          path: 'C:\cygwin\var\log\'
+        timeout-minutes: 5
+
+      - name: Load variables from the cygport file
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
+        run: |
+          eval "$(cygport libinih.cygport vars PVR)"
+          printf 'PVR=%s\n' "$PVR" >>"$GITHUB_ENV"
+        timeout-minutes: 1
+
+      - name: Check tag name
+        run: |
+          $inputTag = '${{ inputs.release_tag }}'
+          if ($inputTag -eq '') {
+            "TAG=v$Env:PVR" >>$Env:GITHUB_ENV
+          } elseif ($inputTag.StartsWith("v$Env:PVR")) {
+            "TAG=$inputTag" >>$Env:GITHUB_ENV
+          } else {
+            Write-Output "::error title=Bad tag::Requested tag $inputTag not prefixed by v$Env:PVR"
+            exit 1
+          }
+        timeout-minutes: 1
+
+      - name: Unpack the build
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
+        run: tar -xf build-results.tar
+        timeout-minutes: 1
+
+      - name: Create draft GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.TAG }}
+          draft: true
+          files: |
+            libinih-*/dist/libinih/*
+            libinih-*/dist/libinih/*/*
+          fail_on_unmatched_files: true
+          target_commitish: ${{ github.sha }}
+        timeout-minutes: 5
