@@ -3,11 +3,6 @@ on: [push, pull_request]
 jobs:
   build-test:
     runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash --noprofile --norc -e -o pipefail -o igncr {0}
-    env:
-      PATH: C:\cygwin\bin
     steps:
 
       - name: Configure Git for Windows' core.autocrlf
@@ -19,12 +14,16 @@ jobs:
         timeout-minutes: 1
 
       - name: Install cygport
-        uses: cygwin/cygwin-install-action@v2
+        uses: cygwin/cygwin-install-action@db475590d56881c6cef7b3f96f6f3dd9532ea1f4
         with:
           packages: cygport
+          add-to-path: false
         timeout-minutes: 10
 
       - name: Load variables from the cygport file
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: |
           eval "$(cygport libinih.cygport vars BUILD_REQUIRES PVR)"
           printf 'BUILD_REQUIRES=%s\n' "$BUILD_REQUIRES" >>"$GITHUB_ENV"
@@ -32,14 +31,15 @@ jobs:
         timeout-minutes: 1
 
       - name: Install Cygwin build requirements
-        uses: cygwin/cygwin-install-action@v2
+        uses: cygwin/cygwin-install-action@db475590d56881c6cef7b3f96f6f3dd9532ea1f4
         with:
           packages: ${{ env.BUILD_REQUIRES }}
+          add-to-path: false
         timeout-minutes: 30
 
       - name: Generate cygcheck output
         if: always()
-        run: cygcheck -srv >/var/log/cygcheck.out
+        run: C:\cygwin\bin\cygcheck.exe -srv >C:\cygwin\var\log\cygcheck.out
         timeout-minutes: 5
 
       - name: Store Cygwin logs
@@ -51,31 +51,52 @@ jobs:
         timeout-minutes: 5
 
       - name: Cygport download
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: cygport libinih.cygport download
         timeout-minutes: 5
 
       - name: Cygport prep
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: cygport libinih.cygport prep
         timeout-minutes: 1
 
       - name: Cygport compile
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: cygport libinih.cygport compile
         timeout-minutes: 30
 
       - name: Cygport test
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: cygport libinih.cygport test
         timeout-minutes: 300
 
       - name: Cygport install
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: cygport libinih.cygport install
         timeout-minutes: 30
 
       - name: Cygport package
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: cygport libinih.cygport package
         timeout-minutes: 5
 
       - name: Tar up build results
         if: always()
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e -o pipefail -o igncr {0}
+        env:
+          PATH: C:\cygwin\bin
         run: tar -caf libinih-build-results.txz libinih-*-*.*/
         timeout-minutes: 10
 
