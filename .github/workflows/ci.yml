@@ -3,8 +3,6 @@ on: [push, pull_request]
 jobs:
   build-test:
     runs-on: windows-latest
-    permissions:
-      contents: write
     defaults:
       run:
         shell: bash --noprofile --norc -e -o pipefail -o igncr {0}
@@ -77,48 +75,6 @@ jobs:
 
       - name: Cygport package
         run: cygport libinih.cygport package
-        timeout-minutes: 5
-
-      - name: Configure SSH
-        if: github.ref == 'refs/heads/main'
-        env:
-          MAINTAINER_KEY: ${{ secrets.MAINTAINER_KEY }}
-        run: |
-          umask 0077
-          mkdir -p ~/.ssh
-          echo "$MAINTAINER_KEY" >~/.ssh/id_rsa
-          echo 'cygwin.com,8.43.85.97 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBGqrxexIuyqmCVe33p1HuhUFzsXte5QZKb+BJlsRrvXOpUOJEW2S0kszyAiymeV7AXaYmHDKVRJpGVR+0ua0Xww=' >~/.ssh/known_hosts
-        timeout-minutes: 1
-
-      - name: Create release tag
-        if: github.ref == 'refs/heads/main'
-        env:
-          GIT_COMMITTER_NAME: ${{ github.actor }}
-          GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
-        run: |
-          git tag -am "v${PVR}" "v${PVR}"
-          git push origin tag "v${PVR}"
-        timeout-minutes: 1
-
-      - name: Create a GitHub release
-        if: github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ env.PVR }}
-          files: |
-            libinih-*/dist/libinih/*
-            libinih-*/dist/libinih/*/*
-          target_commitish: ${{ github.ref }}
-        timeout-minutes: 2
-
-      - name: Mirror to Cygwin Git repositories
-        if: github.ref == 'refs/heads/main'
-        run: git push cygwin@cygwin.com:/git/cygwin-packages/libinih tag "v${PVR}"
-        timeout-minutes: 5
-
-      - name: Cygport upload
-        if: github.ref == 'refs/heads/main'
-        run: SSH_KEY=~/.ssh/id_rsa cygport libinih.cygport upload
         timeout-minutes: 5
 
       - name: Tar up build results
