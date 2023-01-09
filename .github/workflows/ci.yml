@@ -13,6 +13,41 @@ jobs:
         uses: actions/checkout@v3
         timeout-minutes: 1
 
+      # In the name of speed, pull packages from a previous cache on GitHub's
+      # servers if one exists, rather than hitting the Cygwin mirrors.
+      #
+      # Ideally we'd cache the actual Cygwin installation, to avoid the need to
+      # unpack and install the packages, as well as the need to download them,
+      # but the cache action uses Git tar, which copes poorly with the symlinks
+      # in the Cygwin installation directory, and there's a bootstrap problem
+      # with using Cygwin's tar for that purpose!
+      #
+      # We always want to update the cache, as there might have been package
+      # updates since the previous store was cached, so use the trick from [0]
+      # to ensure that happens.
+      # [0]: https://github.com/actions/cache/blob/6fd2d4538ca777f67fccddb233cf1a8ff1339012/tips-and-workarounds.md#update-a-cache
+      - name: Use Cygwin package cache
+        uses: actions/cache/restore@v3
+        with:
+          key: cygwin-packages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: 'C:\cygwin-packages'
+          restore-keys: |
+            cygwin-packages-${{ github.run_id }}-
+            cygwin-packages-
+
+      # Compute a checksum for the current package cache, so we can check if we
+      # need to store a new cache.
+      - name: Compute package cache checksum
+        working-directory: 'C:\'
+        shell: bash
+        run: |
+          if [[ -d cygwin-packages ]]; then
+            find cygwin-packages -type f '!' -name setup.ini -print0 |
+              sort -z |
+              xargs -0 b2sum >cygwin-package-checksum.old
+          fi
+        timeout-minutes: 1
+
       - name: Install cygport
         uses: cygwin/cygwin-install-action@db475590d56881c6cef7b3f96f6f3dd9532ea1f4
         with:
@@ -36,6 +71,29 @@ jobs:
           packages: ${{ env.BUILD_REQUIRES }}
           add-to-path: false
         timeout-minutes: 30
+
+      - name: Check if package cache needs updating
+        if: always()
+        working-directory: 'C:\'
+        shell: bash
+        run: |
+          if [[ -d cygwin-packages ]]; then
+            find cygwin-packages -type f '!' -name setup.ini -print0 |
+              sort -z |
+              xargs -0 b2sum >cygwin-package-checksum.new
+            if ! diff cygwin-package-checksum.old cygwin-package-checksum.new; then
+              printf 'UPDATE_CYGWIN_PACKAGE_CACHE=YesPlease' >>"$GITHUB_ENV"
+            fi
+          fi
+        timeout-minutes: 1
+
+      - name: Store package cache
+        if: always() && env.UPDATE_CYGWIN_PACKAGE_CACHE == 'YesPlease'
+        uses: actions/cache/save@v3
+        with:
+          key: cygwin-packages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: 'C:\cygwin-packages'
+        timeout-minutes: 1
 
       - name: Generate cygcheck output
         if: always()
