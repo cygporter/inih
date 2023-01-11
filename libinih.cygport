@@ -15,6 +15,21 @@ SRC_DIR="inih-r${PV}"
 
 BUILD_REQUIRES=meson
 
+PKG_NAMES="libinih-devel libinih0"
+
+libinih0_SUMMARY="${SUMMARY% *} (runtime)"
+libinih0_CATEGORY="${CATEGORY}"
+libinih0_CONTENTS="\
+  usr/bin/*.dll\
+"
+libinih_devel_SUMMARY="${SUMMARY% *} (devel)"
+libinih_devel_CATEGORY="Devel ${CATEGORY}"
+libinih_devel_CONTENTS="\
+  usr/include/\
+  usr/lib/\
+  usr/share/\
+"
+
 # Based on the upstream .github/workflows/tests.yml
 src_test () {
 	cd ${S}/tests
