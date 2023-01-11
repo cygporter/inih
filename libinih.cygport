@@ -21,13 +21,13 @@ libinih0_SUMMARY="${SUMMARY% *} (runtime)"
 libinih0_CATEGORY="${CATEGORY}"
 libinih0_CONTENTS="\
   usr/bin/*.dll\
+  usr/share/\
 "
 libinih_devel_SUMMARY="${SUMMARY% *} (devel)"
 libinih_devel_CATEGORY="Devel ${CATEGORY}"
 libinih_devel_CONTENTS="\
   usr/include/\
   usr/lib/\
-  usr/share/\
 "
 
 # Based on the upstream .github/workflows/tests.yml
