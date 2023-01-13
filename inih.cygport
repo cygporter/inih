@@ -39,4 +39,4 @@ src_test () {
 	./cpptest.sh
 }
 
-# vim: set ft=bash noexpandtab tabstop=8 listchars=tab\:\ \ ,trail\:-,lead\:-
+# vim: set ft=bash noexpandtab tabstop=8 listchars=tab\:\ \ ,trail\:-,lead\:- :
