@@ -20,7 +20,7 @@ PKG_NAMES="libinih-devel libinih0"
 libinih0_SUMMARY="${SUMMARY% *} (runtime)"
 libinih0_CATEGORY="${CATEGORY}"
 libinih0_CONTENTS="\
-  usr/bin/*.dll\
+  usr/bin/*-0.dll\
   usr/share/\
 "
 libinih_devel_SUMMARY="${SUMMARY% *} (devel)"
