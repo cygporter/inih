@@ -2,6 +2,6 @@ name: CI
 on: [push, pull_request]
 jobs:
   build-test:
-    uses: me-and/cygporter/.github/workflows/ci.yml@workflow
+    uses: cygporter/workflows/.github/workflows/ci.yml@main
     with:
       cygport_file: libinih.cygport
