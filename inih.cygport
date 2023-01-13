@@ -1,6 +1,6 @@
 inherit meson
 
-NAME=libinih
+NAME=inih
 VERSION=56
 RELEASE=1
 CATEGORY=Libs

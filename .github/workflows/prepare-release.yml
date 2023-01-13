@@ -13,5 +13,5 @@ jobs:
   prep-release:
     uses: cygporter/workflows/.github/workflows/prep-release.yml@main
     with:
-      cygport_file: libinih.cygport
+      cygport_file: inih.cygport
       release_tag: ${{ inputs.release_tag }}

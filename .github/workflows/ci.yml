@@ -4,4 +4,4 @@ jobs:
   build-test:
     uses: cygporter/workflows/.github/workflows/ci.yml@main
     with:
-      cygport_file: libinih.cygport
+      cygport_file: inih.cygport
