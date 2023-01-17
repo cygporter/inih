@@ -1,0 +1,7 @@
+name: Build and test
+on: [push, pull_request]
+jobs:
+  build-test:
+    uses: cygporter/workflows/.github/workflows/build-test.yml@main
+    with:
+      cygport_file: inih.cygport
