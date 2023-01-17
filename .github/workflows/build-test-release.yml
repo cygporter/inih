@@ -1,0 +1,27 @@
+name: Build, test, release
+on: [push, pull_request]
+jobs:
+  build-test:
+    uses: cygporter/workflows/.github/workflows/build-test.yml@v1.0.0-rc1
+    with:
+      cygport_file: inih.cygport
+
+  prep-release:
+    if: startsWith(github.ref, join(fromJSON('["refs/heads/v", "${{ needs.build-test.outputs.pv }}"]'), ''))
+    needs: build-test
+    permissions:
+      contents: write
+    uses: cygporter/workflows/.github/workflows/prep-release.yml@v1.0.0-rc1
+    with:
+      cygport_file: inih.cygport
+      publish: true
+
+  release:
+    if: startsWith(github.ref, join(fromJSON('["refs/heads/v", "${{ needs.build-test.outputs.pv }}"]'), ''))
+    needs: [build-test, prep-release]
+    uses: cygporter/workflows/.github/workflows/release.yml@v1.0.0-rc1
+    with:
+      cygport_file: inih.cygport
+      tag_name: ${{ needs.prep-release.outputs.release_tag }}
+    secrets:
+      maintainer_key: ${{ secrets.maintainer_key }}
