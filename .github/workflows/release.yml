@@ -1,0 +1,11 @@
+name: Release
+on:
+  release:
+    types: [released]
+jobs:
+  release:
+    uses: cygporter/workflows/.github/workflows/release.yml@main
+    with:
+      cygport_file: inih.cygport
+    secrets:
+      maintainer_key: ${{ secrets.maintainer_key }}
