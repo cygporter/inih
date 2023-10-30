@@ -14,6 +14,7 @@ SRC_URI="https://github.com/benhoyt/inih/archive/refs/tags/r${PV}/inih-r${PV}.ta
 SRC_DIR="inih-r${PV}"
 
 BUILD_REQUIRES=meson
+PATCH_URI=r57-correct-version.patch
 
 PKG_NAMES="libinih-devel libinih0"
 

@@ -1,0 +1,11 @@
+--- origsrc/inih-r57/meson.build	2023-07-07 03:00:45.000000000 +0100
++++ src/inih-r57/meson.build	2023-10-30 13:52:16.454291400 +0000
+@@ -1,7 +1,7 @@
+ project('inih',
+     ['c'],
+     license : 'BSD-3-Clause',
+-    version : '56',
++    version : '57',
+ )
+ 
+ #### options ####
