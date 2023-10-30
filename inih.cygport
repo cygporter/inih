@@ -1,7 +1,7 @@
 inherit meson
 
 NAME=inih
-VERSION=56
+VERSION=57
 RELEASE=1
 CATEGORY=Libs
 SUMMARY='Simple .ini file parser'
