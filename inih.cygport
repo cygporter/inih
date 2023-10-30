@@ -37,6 +37,13 @@ src_test () {
 
 	cd ${S}/examples
 	./cpptest.sh
+
+	# The upstream code checks for changes by using `git diff`, which works
+	# because they're running the tests in a working copy.  We can't do
+	# that, so we check by comparing the origsrc with the src directory
+	# instead.
+	diff -uNr "${origsrcdir}/${SRC_DIR}/tests" "${srcdir}/${SRC_DIR}/tests"
+	diff -uNr "${origsrcdir}/${SRC_DIR}/examples" "${srcdir}/${SRC_DIR}/examples"
 }
 
 # vim: set ft=bash noexpandtab tabstop=8 listchars=tab\:\ \ ,trail\:-,lead\:- :
