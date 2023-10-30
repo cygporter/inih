@@ -2,26 +2,25 @@ name: Build, test, release
 on: [push, pull_request]
 jobs:
   build-test:
-    uses: cygporter/workflows/.github/workflows/build-test.yml@v1.0.0-rc1
+    uses: cygporter/workflows/.github/workflows/build-test.yml@v2
     with:
       cygport_file: inih.cygport
 
-  prep-release:
-    if: startsWith(github.ref, join(fromJSON('["refs/heads/v", "${{ needs.build-test.outputs.pv }}"]'), ''))
+  github-release:
+    if: github.ref == format('refs/heads/v{0}', needs.build-test.outputs.cygport-pv)
     needs: build-test
     permissions:
       contents: write
-    uses: cygporter/workflows/.github/workflows/prep-release.yml@v1.0.0-rc1
+    uses: cygporter/workflows/.github/workflows/github-release.yml@v2
     with:
-      cygport_file: inih.cygport
-      publish: true
+      tag_name: v${{ needs.build-test.outputs.cygport-pvr }}
 
-  release:
-    if: startsWith(github.ref, join(fromJSON('["refs/heads/v", "${{ needs.build-test.outputs.pv }}"]'), ''))
-    needs: [build-test, prep-release]
-    uses: cygporter/workflows/.github/workflows/release.yml@v1.0.0-rc1
+  cygwin-release:
+    if: github.ref == format('refs/heads/v{0}', needs.build-test.outputs.cygport-pv)
+    needs: [build-test, github-release]
+    uses: cygporter/workflows/.github/workflows/cygwin-release.yml@v2
     with:
       cygport_file: inih.cygport
-      tag_name: ${{ needs.prep-release.outputs.release_tag }}
+      tag_name: v${{ needs.build-test.outputs.cygport-pvr }}
     secrets:
       maintainer_key: ${{ secrets.maintainer_key }}
